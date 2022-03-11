@@ -1,0 +1,75 @@
+Proiectul efectuează cele două etape, de map și de reduce, iar apoi sortează
+rezultatele finale după rang.
+Pentru fiecare din cele două stages este folosit un pool de task-uri, utilizând
+clasa ExecutorService al modelului de Thread Pool prezentat la laborator. În
+urma adăugării task-urilor în pool, se verifică dacă toate s-au terminat,
+folosind metoda isTerminated. Se folosește o buclă care rulează cât timp
+acestea sunt încă în desfășurare.
+
+Dicționarul
+Dicționarul este un TreeMap cu chei (lungimi), respectiv valori (număr de
+cuvinte) de tip Integer. Motivul folosirii acestei structuri de date este
+menținerea ordinii sortate descrescător după lungimi.
+
+Etapa de map
+Fiecare task de Map implementează interfața Runnable (pentru folosirea
+ExecutorService) și este descris, așa cum cere și enunțul, de numele
+documentului asociat, un offset, dimensiunea fragmentului de prelucrat) și un
+rezultat.
+
+Rezultatele urmează să fie prelucrate de etapa de reduce și conțin numele
+documentului, dicționarul lungime cuvânt - număr de cuvinte și vectorul de
+cuvinte de lungime maximă.
+
+Am decis folosirea API-ului RandomAccessFile pentru a putea face operații de
+seek (având un offset) și read (folosind o dimensiune).
+
+Pentru șirul corespunzător unui task, trebuie verificat dacă fișierul
+începe cu mijlocul unui cuvânt. Am decis să extrag și caracterul care precede
+acest șir, astfel încât se va citi incrementul dimensiunii normale.
+
+Astfel, dacă acel caracter precedent este o literă (nu este un separator)
+înseamnă că termenul nu este întreg, și trebuie eliminat din prelucrare. Se
+elimină litere din față până la următorul cuvânt (adică până la delimitatori,
+pentru că de sărirea peste aceștia se va ocupa un StringTokenizer).
+
+În cazul în care offset-ul este 0 (se prelucrează de la începutul fișierului),
+nu există caractere precedente, iar șirul va începe sigur cu un cuvânt întreg.
+
+În plus, trebuie verificat dacă șirul se termină cu un cuvânt fragmentat. În
+acest caz, citesc caracter cu caracter (literă) peste ce s-a citit deja până la
+întâlnirea unui separator.
+
+Se folosesc string-tokens pentru identificarea cuvintelor. Se actualizează
+la fiecare pas dicționarul, iar la găsirea unui cuvânt de lungime maximă, nouă,
+se resetează lista de termeni maximali.
+
+
+Etapa de reduce
+Fiecare task de reduce are un vector cu toate rezultatele prelucrate în etapa
+anterioară. Acest vector va fi ulterior combinat în variabila
+combinedMapTaskResult, care la rândul ei va conduce la obținerea rezultatului
+final, reduceTaskResult.
+
+Operația de merge a rezultatelor de map se face prin efectuarea sumelor
+valorilor cu aceleași chei (adică calcularea unui total de cuvinte pentru
+fiecare lungime). În plus, se setează numele documentului și
+se adaugă toate cuvintele maximale (local) din fiecare sub-task component.
+Dintre acestea se elimină cele care nu sunt de lungime maximă (globală). Având
+în vedere structura de TreeMap sortată după chei, se poate extrage prima
+intrare pentru rezultatul cerut de problemă.
+
+Precalcularea valorilor Fibonacci se face într-un vector, pentru valorile
+0 .. incrementul lungimii maxime (=> map.firstKey() + 2 elemente).
+
+
+Observații
+Pentru un cod mai succint și o implementare mai clară și eficientă, am ales să
+folosesc funcționalele corespunzătoare Java Streams, precum:
+-   mapToInt, sum pentru efectuarea totalului cuvintelor, în metoda
+calculateRank
+-   map, pentru compunerea unui vector de rezultate din vectorul unor task-uri
+-   filter pentru extragerea task-ului de reduce corespunzător unui rezultat de
+task map
+-   forEach, în locul buclelor clasice (iterative)
+
